@@ -136,6 +136,23 @@ input::placeholder{color:var(--dim)}
 .badge-icon{font-size:24px;margin-bottom:4px}
 .badge-name{font-size:10px;color:var(--sub);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
 
+/* Noticeboard */
+.nb-compose{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.nb-compose input,.nb-compose textarea{background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:13px;outline:none;font-family:inherit;transition:border-color .2s;width:100%}
+.nb-compose input:focus,.nb-compose textarea:focus{border-color:var(--blue)}
+.nb-compose textarea{resize:vertical;min-height:60px}
+.nb-post{background:var(--yellow);color:#000;border:none;border-radius:8px;padding:9px 22px;font-weight:800;font-size:13px;cursor:pointer;align-self:flex-end;transition:all .2s}
+.nb-post:hover{filter:brightness(1.1)}
+.notice-item{background:var(--bg);border-left:3px solid var(--yellow);border-radius:0 10px 10px 0;padding:12px 14px;margin-bottom:8px;position:relative}
+.notice-title{font-size:.88rem;font-weight:800;margin-bottom:3px}
+.notice-msg{font-size:.82rem;color:var(--sub);line-height:1.5}
+.notice-meta{font-size:.7rem;color:var(--dim);margin-top:6px}
+.notice-del{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--dim);cursor:pointer;font-size:.8rem;padding:2px 6px;border-radius:4px;transition:color .2s}
+.notice-del:hover{color:var(--red)}
+.nb-code-bar{display:flex;gap:8px;margin-bottom:14px}
+.nb-code-bar input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;outline:none;font-family:inherit}
+.nb-code-bar button{background:var(--blue);border:none;color:#fff;border-radius:8px;padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
+
 /* Toast */
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e1e3a;color:#fff;padding:10px 22px;border-radius:20px;font-size:14px;font-weight:600;z-index:1000;transition:transform .25s;border:1px solid var(--border)}
 #toast.show{transform:translateX(-50%) translateY(0)}
@@ -218,6 +235,21 @@ input::placeholder{color:var(--dim)}
     </div>
     <div id="t-packs-list"><div style="color:var(--dim);font-size:14px;padding:20px 0;text-align:center">Custom packs you create in QuizBlitz will appear here</div></div>
   </div>
+
+  <!-- Noticeboard -->
+  <div class="panel">
+    <div class="section-head" style="justify-content:space-between">
+      <span>📢 Class Noticeboard</span>
+      <span id="t-nb-code" style="font-size:11px;color:var(--dim);font-weight:700"></span>
+    </div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:12px">Students subscribe with your teacher code to see your posts.</div>
+    <div class="nb-compose">
+      <input type="text" id="nb-title" placeholder="Title (e.g. Test on Friday!)" maxlength="60"/>
+      <textarea id="nb-msg" placeholder="Message for your class..." maxlength="300"></textarea>
+      <button class="nb-post" onclick="postNotice()">📢 Post</button>
+    </div>
+    <div id="t-notices-list"><div style="color:var(--dim);font-size:13px;text-align:center;padding:12px 0">No notices posted yet.</div></div>
+  </div>
 </div>
 
 <!-- ══════════════ STUDENT PROFILE ══════════════ -->
@@ -274,6 +306,25 @@ input::placeholder{color:var(--dim)}
     <div class="section-head">🏅 Badges</div>
     <div class="badges-wrap" id="s-badges">
       <div style="color:var(--dim);font-size:14px;padding:8px 0">Earn badges by playing games and using the dashboard!</div>
+    </div>
+  </div>
+
+  <!-- Noticeboard -->
+  <div class="panel">
+    <div class="section-head">📢 Class Noticeboard</div>
+    <div id="s-nb-subscribed" style="display:none">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <span style="font-size:12px;color:var(--dim)" id="s-nb-teacher-label"></span>
+        <button onclick="unsubscribeNotices()" style="margin-left:auto;background:none;border:none;color:var(--dim);font-size:12px;cursor:pointer;text-decoration:underline">Change</button>
+      </div>
+      <div id="s-notices-list"><div style="color:var(--dim);font-size:13px;text-align:center;padding:12px 0">No notices from your teacher yet.</div></div>
+    </div>
+    <div id="s-nb-join">
+      <div style="font-size:13px;color:var(--sub);margin-bottom:10px">Enter your teacher's code to see their class notices.</div>
+      <div class="nb-code-bar">
+        <input type="text" id="s-nb-code-input" placeholder="Teacher code..." maxlength="30"/>
+        <button onclick="subscribeNotices()">Subscribe</button>
+      </div>
     </div>
   </div>
 
@@ -519,6 +570,8 @@ async function loadTeacherDash(){
     </table>`;
   }
 
+  loadTeacherNotices();
+
   // Custom packs from localStorage (packs are stored locally in QuizBlitz)
   const packs=JSON.parse(localStorage.getItem('qb_packs')||'[]');
   const packsList=document.getElementById('t-packs-list');
@@ -605,6 +658,8 @@ async function loadStudentProfile(){
     recentEl.innerHTML='<div style="color:var(--dim);font-size:14px;padding:20px 0;text-align:center">No games yet — join a QuizBlitz!</div>';
   }
 
+  loadStudentNotices();
+
   // Badges
   const badges=[];
   if(totalXP>=100) badges.push({icon:'⭐',name:'First Steps'});
@@ -628,6 +683,94 @@ async function loadStudentProfile(){
   } else {
     badgesEl.innerHTML='<div style="color:var(--dim);font-size:14px;padding:8px 0">Earn badges by playing games and using the dashboard!</div>';
   }
+}
+
+// ══════════════════════════════
+// NOTICEBOARD — TEACHER
+// ══════════════════════════════
+function loadTeacherNotices(){
+  if(!session) return;
+  document.getElementById('t-nb-code').textContent='Your code: '+session.id;
+  db.ref('noticeboard/'+session.id+'/posts').orderByChild('ts').limitToLast(10).once('value').then(snap=>{
+    const posts=[];
+    snap.forEach(c=>posts.unshift({key:c.key,...c.val()}));
+    const el=document.getElementById('t-notices-list');
+    if(!posts.length){ el.innerHTML='<div style="color:var(--dim);font-size:13px;text-align:center;padding:12px 0">No notices posted yet.</div>'; return; }
+    el.innerHTML=posts.map(p=>`
+      <div class="notice-item">
+        <div class="notice-title">${escHtml(p.title||'')}</div>
+        <div class="notice-msg">${escHtml(p.msg||'')}</div>
+        <div class="notice-meta">${timeAgo(p.ts)}</div>
+        <button class="notice-del" onclick="deleteNotice('${p.key}')">✕</button>
+      </div>`).join('');
+  }).catch(()=>{});
+}
+
+async function postNotice(){
+  const title=(document.getElementById('nb-title').value||'').trim();
+  const msg=(document.getElementById('nb-msg').value||'').trim();
+  if(!title&&!msg){ toast('Add a title or message first'); return; }
+  try{
+    await db.ref('noticeboard/'+session.id+'/posts').push({title,msg,ts:firebase.database.ServerValue.TIMESTAMP});
+    document.getElementById('nb-title').value='';
+    document.getElementById('nb-msg').value='';
+    toast('📢 Posted!');
+    loadTeacherNotices();
+  }catch(e){ toast('Could not post — check internet'); }
+}
+
+async function deleteNotice(key){
+  try{
+    await db.ref('noticeboard/'+session.id+'/posts/'+key).remove();
+    toast('Deleted');
+    loadTeacherNotices();
+  }catch(e){ toast('Could not delete'); }
+}
+
+// ══════════════════════════════
+// NOTICEBOARD — STUDENT
+// ══════════════════════════════
+function loadStudentNotices(){
+  const teacherId=localStorage.getItem('nb_teacher_id')||'';
+  if(!teacherId){ showNbJoin(); return; }
+  document.getElementById('s-nb-subscribed').style.display='block';
+  document.getElementById('s-nb-join').style.display='none';
+  document.getElementById('s-nb-teacher-label').textContent='Subscribed to teacher: '+teacherId.split('_').slice(0,-1).join(' ');
+  db.ref('noticeboard/'+teacherId+'/posts').orderByChild('ts').limitToLast(8).once('value').then(snap=>{
+    const posts=[];
+    snap.forEach(c=>posts.unshift(c.val()));
+    const el=document.getElementById('s-notices-list');
+    if(!posts.length){ el.innerHTML='<div style="color:var(--dim);font-size:13px;text-align:center;padding:12px 0">No notices from your teacher yet.</div>'; return; }
+    el.innerHTML=posts.map(p=>`
+      <div class="notice-item">
+        <div class="notice-title">${escHtml(p.title||'')}</div>
+        <div class="notice-msg">${escHtml(p.msg||'')}</div>
+        <div class="notice-meta">${timeAgo(p.ts)}</div>
+      </div>`).join('');
+  }).catch(()=>{});
+}
+
+async function subscribeNotices(){
+  const code=(document.getElementById('s-nb-code-input').value||'').trim();
+  if(!code){ toast('Enter your teacher\'s code'); return; }
+  // Verify it exists
+  try{
+    const snap=await db.ref('noticeboard/'+code).once('value');
+    if(!snap.exists()){ toast('❌ Teacher not found — check the code'); return; }
+    localStorage.setItem('nb_teacher_id',code);
+    loadStudentNotices();
+    toast('✅ Subscribed!');
+  }catch(e){ toast('Could not subscribe — check internet'); }
+}
+
+function unsubscribeNotices(){
+  localStorage.removeItem('nb_teacher_id');
+  showNbJoin();
+}
+
+function showNbJoin(){
+  document.getElementById('s-nb-subscribed').style.display='none';
+  document.getElementById('s-nb-join').style.display='block';
 }
 
 // ══════════════════════════════
