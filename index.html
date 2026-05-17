@@ -340,7 +340,7 @@ input::placeholder{color:var(--dim)}
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script>
-firebase.initializeApp({
+if(!firebase.apps.length) firebase.initializeApp({
   apiKey:"AIzaSyAfflbNLrrn95tPvLW0bzR8Q4iAqOKUOrM",
   authDomain:"sdvb-d16b2.firebaseapp.com",
   databaseURL:"https://sdvb-d16b2-default-rtdb.firebaseio.com",
@@ -573,7 +573,7 @@ async function loadTeacherDash(){
   loadTeacherNotices();
 
   // Custom packs from localStorage (packs are stored locally in QuizBlitz)
-  const packs=JSON.parse(localStorage.getItem('qb_packs')||'[]');
+  let packs=[];try{packs=JSON.parse(localStorage.getItem('qb_packs')||'[]');}catch{}
   const packsList=document.getElementById('t-packs-list');
   if(!packs.length){
     packsList.innerHTML='<div style="color:var(--dim);font-size:14px;padding:20px 0;text-align:center">Custom packs you create in QuizBlitz will appear here</div>';
@@ -610,8 +610,9 @@ async function loadStudentProfile(){
   const acc=snap.val()||{};
 
   // Pull dashboard progress from localStorage (it saves there)
-  const lsProgress=JSON.parse(localStorage.getItem('student_progress')||'{}');
-  const lsScores=JSON.parse(localStorage.getItem('local_scores')||'{}');
+  let lsProgress={},lsScores={};
+  try{lsProgress=JSON.parse(localStorage.getItem('student_progress')||'{}');}catch{}
+  try{lsScores=JSON.parse(localStorage.getItem('local_scores')||'{}');}catch{}
 
   // XP per subject from localStorage progress
   const mathXP=(lsProgress.math||0)*10;
@@ -778,7 +779,7 @@ function showNbJoin(){
 // ══════════════════════════════
 loadSession();
 if(session){
-  loadDashboard();
+  loadDashboard().catch(err=>{console.error('Dashboard load failed',err);showScreen('login-screen');});
 } else {
   showScreen('login-screen');
 }
